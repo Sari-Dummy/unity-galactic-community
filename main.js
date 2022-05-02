@@ -69,7 +69,7 @@ class InfluenceShift {
     }
 }
 
-class InfluenceShiftsOfFaction {
+class InfluenceShiftBulk {
     constructor(factionKey, influenceData) {
         this.faction = factions[factionKey]
         this.influenceShiftArray = []
@@ -121,7 +121,7 @@ let numOfCols = 3
 function tableRowTotalCountryInfluence(country) {
     let tableRow = `
     <tr>
-        <td>${country.name}</td>
+        <td class="country">${country.name}</td>
         <td>${country.shareOfPoints()}%</td>
         <td>${country.totalPoints()} pts</td>
     </tr>
@@ -155,7 +155,7 @@ function tableTotalCountryInfluence() {
 function tableRowFactionCountryInfluence(country, factionKey) {
     let htmlToReturn = `
     <tr>
-        <td>${country.name}</td>
+        <td class="country">${country.name}</td>
         <td>${country.factions[factionKey].shareOfPoints()}%</td>
         <td>${country.factions[factionKey].points} pts</td>
         <td>${country.factions[factionKey].shareOfPointsInFaction()} %</td>
@@ -212,10 +212,16 @@ function factionTablesHtml() {
 let periodSection = document.getElementById("period-section")
 
 function influenceShiftToHtml(influenceShift) {
+    let sign = () => {
+        if (influenceShift.amountOfPoints > 0) { return "+" }
+        if (influenceShift.amountOfPoints < 0) { return "-" }
+        return ""
+    }
+
     return `
     <tr>
         <td>${influenceShift.country.name}</td>
-        <td>${influenceShift.amountOfPoints} pts</td>
+        <td>${sign()}${influenceShift.amountOfPoints} pts</td>
     </tr>
     `
 }
@@ -265,7 +271,7 @@ function periodToHtml(period) {
 
 function influenceHistoryHtml() {
 
-    let influenceHistoryHtml = ""
+    let influenceHistoryHtml = "<h2>History of the Galactic Community</h2>"
 
     for (let period of influenceHistory) {
         influenceHistoryHtml += periodToHtml(period)
@@ -300,11 +306,14 @@ let countries = {
 let periods = {
     period2310s: new Period(
         "The 2310s",
-        `The Space Weavers are on the rise, increasing their membership as the Ultravisionary creates the Scientific Bond.<br>
-        Still a budding project of a single country and therefore not yet present on the galactic stage, many nations have shown interest
-        to it and will likely join, making it part of the Galactic Community.`,
+
+        `The <b>Space Weavers</b>, a decades old galactic trading organisation, is on the rise as they seek out increased membership through the
+        entire galaxy.<br>
+
+        The Ultravisionary creates the <b>Scientific Bond</b>. Still a budding project of a single country and therefore not yet present on the 
+        galactic stage, many nations have shown interest to it and will likely join, making it part of the Galactic Community.`,
         [
-            new InfluenceShiftsOfFaction(_spaceWeaverKey,
+            new InfluenceShiftBulk(_spaceWeaverKey,
                 [
                     [countries.sari, +250],
                     [countries.randwarf, +290],
@@ -314,7 +323,7 @@ let periods = {
                 ]
             ),
 
-            new InfluenceShiftsOfFaction(_scientificBondKey,
+            new InfluenceShiftBulk(_scientificBondKey,
                 [
                     [countries.stooser, +100],
                     [countries.quinny, +30],
@@ -323,11 +332,36 @@ let periods = {
                 ]
             )
         ]
+    ),
+
+    period2320: new Period(
+        "2320",
+
+        `Work in progress: roleplay still has to be done
+        `,
+        [
+            new InfluenceShiftBulk(_spaceWeaverKey,
+                [
+                    [countries.randwarf, +30],
+                    [countries.wiggen, +50]
+                ]
+            ),
+
+            new InfluenceShiftBulk(_scientificBondKey,
+                [
+                    [countries.stooser, +50],
+                    [countries.quinny, +50],
+                    [countries.spectre, +50],
+                    [countries.wiggen, +50]
+                ]
+            )
+        ]
     )
 }
 
 let influenceHistory = [
-    periods.period2310s
+    periods.period2310s,
+    periods.period2320
 ]
 
 main()
