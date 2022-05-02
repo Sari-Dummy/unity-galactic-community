@@ -4,8 +4,11 @@ function main() {
     calculateFactionPoints()
 
     tableSection.innerHTML = factionTablesHtml()
+    periodSection.innerHTML = influenceHistoryHtml()
 }
 
+// Data Logic
+// Actual data is at the bottom of the page
 let totalPoints = 0
 
 class Faction {
@@ -19,19 +22,6 @@ class Faction {
         this.memberCountries = []
     }
 }
-
-let factions = {
-    spaceWeavers: new Faction("spaceWeavers", "Space Weavers"),
-
-    scientificBond: new Faction("scientificBond", "Scientific Bond"),
-
-    assFaction: new Faction("assFaction", "The Union of Ass")
-}
-
-// faction key shorthands
-const _spaceWeaverKey = factions.spaceWeavers.key
-const _scientificBondKey = factions.scientificBond.key
-const _ass = factions.assFaction.key
 
 class FactionOfCountry {
     constructor(factionKey) {
@@ -71,17 +61,6 @@ class Country {
     }
 }
 
-let countries = {
-    // alphabetical order
-    kindra: new Country("Osiri Federation", [_spaceWeaverKey]),
-    quinny: new Country("Five Banners Privateers", [_spaceWeaverKey]),
-    randwarf: new Country("Utopian Project", [_spaceWeaverKey]),
-    sari: new Country("Aquan Alliance", [_spaceWeaverKey, _scientificBondKey]),
-    stooser: new Country("Ultravisionary", [_scientificBondKey]),
-    wiggen: new Country("Vrinn United", [_spaceWeaverKey]),
-    assPlayer: new Country("Mister Ass", [_ass])
-}
-
 class InfluenceShift {
     constructor(country, factionKey, amountOfPoints) {
         this.country = country
@@ -92,6 +71,7 @@ class InfluenceShift {
 
 class InfluenceShiftsOfFaction {
     constructor(factionKey, influenceData) {
+        this.faction = factions[factionKey]
         this.influenceShiftArray = []
         for (let influenceDatum of influenceData) {
             this.influenceShiftArray.push(
@@ -102,7 +82,8 @@ class InfluenceShiftsOfFaction {
 }
 
 class Period {
-    constructor(description, influenceShifts) {
+    constructor(name, description, influenceShifts) {
+        this.name = name
         this.description = description
         this.influenceShifts = influenceShifts
     }
@@ -111,40 +92,6 @@ class Period {
 function shiftInfluence(influenceShift) {
     influenceShift.country.factions[influenceShift.factionKey].points += influenceShift.amountOfPoints
 }
-
-let periods = {
-    period2322: new Period(
-        "The Galactic Community is organically formed as a result of multiple galactic factions rising.",
-        [
-            new InfluenceShiftsOfFaction(_spaceWeaverKey,
-                [
-                    [countries.sari, +250],
-                    [countries.randwarf, +290],
-                    [countries.quinny, +240],
-                    [countries.kindra, +90],
-                    [countries.wiggen, +100]
-                ]
-            ),
-
-            new InfluenceShiftsOfFaction(_scientificBondKey,
-                [
-                    [countries.sari, +100],
-                    [countries.stooser, +250]
-                ]
-            ),
-
-            new InfluenceShiftsOfFaction(_ass,
-                [
-                    [countries.assPlayer, +200]
-                ]
-            )
-        ]
-    )
-}
-
-let influenceHistory = [
-    periods.period2322
-]
 
 function calculateCountryPoints() {
     for (let period of influenceHistory) {
@@ -166,6 +113,7 @@ function calculateFactionPoints() {
 }
 
 // document logic
+//// for influence tables
 let tableSection = document.getElementById("table-section")
 let numOfCols = 3
 
@@ -202,7 +150,6 @@ function tableTotalCountryInfluence() {
 
     return totalInfluenceTable
 }
-
 
 // Influence of each faction and each country's influence within that faction
 function tableRowFactionCountryInfluence(country, factionKey) {
@@ -260,5 +207,127 @@ function factionTablesHtml() {
 
     return factionTables
 }
+
+//// for influence history
+let periodSection = document.getElementById("period-section")
+
+function influenceShiftToHtml(influenceShift) {
+    return `
+    <tr>
+        <td>${influenceShift.country.name}</td>
+        <td>${influenceShift.amountOfPoints} pts</td>
+    </tr>
+    `
+}
+
+function influenceShiftBulkToHtml(influenceShiftBulk) {
+
+    let influenceShiftRows = ""
+
+    for (let influenceShift of influenceShiftBulk.influenceShiftArray) {
+        influenceShiftRows += influenceShiftToHtml(influenceShift)
+    }
+
+    return `
+    <table class="influence-shift">
+        <thead>
+            <th colspan="3">${influenceShiftBulk.faction.name}</th>
+        </thead>
+        <tbody>
+            ${influenceShiftRows}
+        </tbody>
+    </table>
+    `
+}
+
+function periodToHtml(period) {
+    let influenceShiftTables = ""
+
+    for (influenceShiftBulk of period.influenceShifts) {
+        influenceShiftTables += influenceShiftBulkToHtml(influenceShiftBulk)
+    }
+
+    let periodHtml = `
+    <details class="influence-period">
+        <summary class="period-name">
+            ${period.name}
+        </summary>
+        <p class="period-description">
+            ${period.description}
+        </p>
+        ${influenceShiftTables}
+    </details>
+    <br>
+    `
+
+    return periodHtml
+}
+
+function influenceHistoryHtml() {
+
+    let influenceHistoryHtml = ""
+
+    for (let period of influenceHistory) {
+        influenceHistoryHtml += periodToHtml(period)
+    }
+
+    return influenceHistoryHtml
+}
+
+
+// Data
+let factions = {
+    spaceWeavers: new Faction("spaceWeavers", "Space Weavers"),
+
+    scientificBond: new Faction("scientificBond", "Scientific Bond")
+}
+
+// faction key shorthands
+const _spaceWeaverKey = factions.spaceWeavers.key
+const _scientificBondKey = factions.scientificBond.key
+
+let countries = {
+    // alphabetical order
+    kindra: new Country("Osiri Federation", [_spaceWeaverKey]),
+    quinny: new Country("Five Banners Privateers", [_spaceWeaverKey, _scientificBondKey]),
+    randwarf: new Country("Utopian Project", [_spaceWeaverKey]),
+    sari: new Country("Aquan Alliance", [_spaceWeaverKey]),
+    spectre: new Country("Tel'Narior", [_scientificBondKey]),
+    stooser: new Country("Ultravisionary", [_scientificBondKey]),
+    wiggen: new Country("Vrinn United", [_spaceWeaverKey, _scientificBondKey])
+}
+
+let periods = {
+    period2310s: new Period(
+        "The 2310s",
+        `The Space Weavers are on the rise, increasing their membership as the Ultravisionary creates the Scientific Bond.<br>
+        Still a budding project of a single country and therefore not yet present on the galactic stage, many nations have shown interest
+        to it and will likely join, making it part of the Galactic Community.`,
+        [
+            new InfluenceShiftsOfFaction(_spaceWeaverKey,
+                [
+                    [countries.sari, +250],
+                    [countries.randwarf, +290],
+                    [countries.quinny, +240],
+                    [countries.kindra, +90],
+                    [countries.wiggen, +100]
+                ]
+            ),
+
+            new InfluenceShiftsOfFaction(_scientificBondKey,
+                [
+                    [countries.stooser, +100],
+                    [countries.quinny, +30],
+                    [countries.spectre, +30],
+                    [countries.wiggen, +30]
+                ]
+            )
+        ]
+    )
+}
+
+let influenceHistory = [
+    periods.period2310s
+]
 
 main()
