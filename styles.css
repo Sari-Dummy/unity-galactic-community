@@ -12,6 +12,7 @@ h1 {
 table {
     font-size: medium;
     border: 1px solid #F3F3F3;
+    margin-left: 1em;
 }
 
 th {
@@ -25,10 +26,8 @@ td {
 .faction-table-section {}
 
 .faction-table {
-    float: left;
-    margin-left: 1em;
+    display: inline-block;
+    vertical-align: top;
 }
 
-p {
-    float: inline-start;
-}
+p {}

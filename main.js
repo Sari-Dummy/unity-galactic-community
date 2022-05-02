@@ -23,12 +23,15 @@ class Faction {
 let factions = {
     spaceWeavers: new Faction("spaceWeavers", "Space Weavers"),
 
-    scientificBond: new Faction("scientificBond", "Scientific Bond")
+    scientificBond: new Faction("scientificBond", "Scientific Bond"),
+
+    assFaction: new Faction("assFaction", "The Union of Ass")
 }
 
 // faction key shorthands
 const _spaceWeaverKey = factions.spaceWeavers.key
 const _scientificBondKey = factions.scientificBond.key
+const _ass = factions.assFaction.key
 
 class FactionOfCountry {
     constructor(factionKey) {
@@ -75,7 +78,8 @@ let countries = {
     randwarf: new Country("Utopian Project", [_spaceWeaverKey]),
     sari: new Country("Aquan Alliance", [_spaceWeaverKey, _scientificBondKey]),
     stooser: new Country("Ultravisionary", [_scientificBondKey]),
-    wiggen: new Country("Vrinn United", [_spaceWeaverKey])
+    wiggen: new Country("Vrinn United", [_spaceWeaverKey]),
+    assPlayer: new Country("Mister Ass", [_ass])
 }
 
 class InfluenceShift {
@@ -127,6 +131,12 @@ let periods = {
                     [countries.sari, +100],
                     [countries.stooser, +250]
                 ]
+            ),
+
+            new InfluenceShiftsOfFaction(_ass,
+                [
+                    [countries.assPlayer, +200]
+                ]
             )
         ]
     )
@@ -157,7 +167,7 @@ function calculateFactionPoints() {
 
 // document logic
 let tableSection = document.getElementById("table-section")
-let numOfCols = 2
+let numOfCols = 3
 
 // Total influence of each country
 function tableRowTotalCountryInfluence(country) {
@@ -165,6 +175,7 @@ function tableRowTotalCountryInfluence(country) {
     <tr>
         <td>${country.name}</td>
         <td>${country.shareOfPoints()}%</td>
+        <td>${country.totalPoints()} pts</td>
     </tr>
     `
     return tableRow
@@ -198,7 +209,9 @@ function tableRowFactionCountryInfluence(country, factionKey) {
     let htmlToReturn = `
     <tr>
         <td>${country.name}</td>
-        <td>${country.factions[factionKey].shareOfPointsInFaction()}%</td>
+        <td>${country.factions[factionKey].shareOfPoints()}%</td>
+        <td>${country.factions[factionKey].points} pts</td>
+        <td>${country.factions[factionKey].shareOfPointsInFaction()} %</td>
     </tr>
     `
     return htmlToReturn
@@ -207,6 +220,16 @@ function tableRowFactionCountryInfluence(country, factionKey) {
 function tableFactionInfluence(faction) {
     let factionInfluenceTable = ""
     let tableRows = ""
+
+    let totalInfluence = `
+    <tr>
+        <td><b>Total faction influence</b></td>
+        <td><b>${factions[faction.key].shareOfPoints()}%</b></td>
+        <td>${factions[faction.key].points} pts</td>
+    </tr>
+    `
+
+    tableRows += totalInfluence
 
     for (let country of faction.memberCountries) {
         tableRows += tableRowFactionCountryInfluence(country, faction.key)
