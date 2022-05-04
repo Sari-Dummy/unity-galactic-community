@@ -16,6 +16,7 @@ class Faction {
         this.key = key
         this.name = name
         this.points = points
+        this.pointMultiplier = 1
         this.shareOfPoints = () => {
             return Math.round(this.points / totalPoints * 100)
         }
@@ -61,6 +62,7 @@ class Country {
     }
 }
 
+// This is used to modify the influence of a country within a faction
 class InfluenceShift {
     constructor(country, factionKey, amountOfPoints) {
         this.country = country
@@ -69,6 +71,7 @@ class InfluenceShift {
     }
 }
 
+// This is used to store all the influence shifts within a faction within a period
 class InfluenceShiftBulk {
     constructor(factionKey, influenceData) {
         this.faction = factions[factionKey]
@@ -81,6 +84,7 @@ class InfluenceShiftBulk {
     }
 }
 
+// This is used to modify the overall influence of a faction only once
 class FactionShift {
     constructor(factionKey, multiplier) {
         this.factionKey = factionKey
@@ -88,22 +92,52 @@ class FactionShift {
     }
 }
 
+// This modifies a permanent modifier to a faction making it more/less powerful
+class PermanentFactionShift {
+    constructor(factionKey, multiplier, retroactive = false) {
+        this.factionKey = factionKey
+        this.multiplier = multiplier
+        // If it is retroactive, then it also multiplies all the
+        // current influence of all members by the multiplier.
+        // Otherwise it only applies the modifier to subsequent shifts.
+        this.retroactive = retroactive
+    }
+}
+
 class Period {
-    constructor(name, description, influenceShifts = [], factionShifts = []) {
+    constructor(
+        name,
+        description,
+        influenceShifts = [],
+        factionShifts = [],
+        permanentFactionShifts = []
+    ) {
         this.name = name
         this.description = description
         this.influenceShifts = influenceShifts
         this.factionShifts = factionShifts
+        this.permanentFactionShifts = permanentFactionShifts
     }
 }
 
 function shiftInfluence(influenceShift) {
-    influenceShift.country.factions[influenceShift.factionKey].points += influenceShift.amountOfPoints
+    let countryFaction = influenceShift.country.factions[influenceShift.factionKey]
+    let faction = factions[influenceShift.factionKey]
+
+    countryFaction.points += influenceShift.amountOfPoints * faction.pointMultiplier
 }
 
 function shiftFactionInfluence(factionShift) {
     for (let country of factions[factionShift.factionKey].memberCountries) {
         country.factions[factionShift.factionKey].points *= factionShift.multiplier
+    }
+}
+
+function enactPermanentFactionShift(permanentFactionShift) {
+    factions[permanentFactionShift.factionKey].pointMultiplier =
+        permanentFactionShift.multiplier
+    if (permanentFactionShift.retroactive) {
+        shiftFactionInfluence(permanentFactionShift)
     }
 }
 
@@ -116,6 +150,9 @@ function calculateCountryPoints() {
         }
         for (let factionShift of period.factionShifts) {
             shiftFactionInfluence(factionShift)
+        }
+        for (let permanentFactionShift of period.permanentFactionShifts) {
+            enactPermanentFactionShift(permanentFactionShift)
         }
     }
 }
@@ -202,7 +239,11 @@ function tableFactionInfluence(faction) {
     factionInfluenceTable = `
     <table class="faction-table">
         <thead>
-            <th colspan=${numOfCols}>${faction.name}</th>
+            <th colspan=${numOfCols}>${faction.name}<br>
+                <div class="faction-modifier">
+                    Modifier: ${multiplierToPercentage(faction.pointMultiplier)}%
+                </div>
+            </th>
         </thead>
         <tbody>
             ${tableRows}
@@ -263,13 +304,20 @@ function influenceShiftBulkToHtml(influenceShiftBulk) {
     `
 }
 
-function factionShiftToHtml(factionShift) {
-    let shiftPercentage = 0
-    if (factionShift.multiplier < 1) {
-        shiftPercentage = Math.round(-((1 - factionShift.multiplier) * 100))
+function multiplierToPercentage(multiplier) {
+    let shiftPercentage = 1
+    let sign = ""
+    if (multiplier < 1) {
+        shiftPercentage = Math.round(-((1 - multiplier) * 100))
     } else {
-        shiftPercentage = Math.round((factionShift.multiplier - 1) * 100)
+        shiftPercentage = Math.round((multiplier - 1) * 100)
+        sign = "+"
     }
+    return `${sign}${shiftPercentage}`
+}
+
+function factionShiftToHtml(factionShift) {
+    let shiftPercentage = multiplierToPercentage(factionShift.multiplier)
 
     return `
     <tr>
@@ -301,6 +349,32 @@ function allFactionShiftsToHtml(factionShifts) {
     `
 }
 
+function permanentFactionShiftToHtml(permanentFactionShift) {
+    return factionShiftToHtml(permanentFactionShift)
+}
+
+function allPermanentFactionShiftsToHtml(permanentFactionShifts) {
+    if (permanentFactionShifts.length == 0) {
+        return ""
+    }
+
+    let permanentFactionShiftRows = ""
+    for (let permanentFactionShift of permanentFactionShifts) {
+        permanentFactionShiftRows += permanentFactionShiftToHtml(permanentFactionShift)
+    }
+
+    return `
+    <table class="influence-shift">
+        <thead>
+            <th colspan="2">Permanent modifiers</th>
+        </thead>
+        <tbody>
+            ${permanentFactionShiftRows}
+        </tbody>
+    </table>
+    `
+}
+
 function periodToHtml(period) {
     let influenceShiftTables = ""
 
@@ -319,6 +393,7 @@ function periodToHtml(period) {
         </p>
         ${influenceShiftTables}
         ${allFactionShiftsToHtml(period.factionShifts)}
+        ${allPermanentFactionShiftsToHtml(period.permanentFactionShifts)}
     </details>
     <br>
     `
@@ -376,40 +451,48 @@ let periods = {
                     [countries.randwarf, +290],
                     [countries.quinny, +240],
                     [countries.kindra, +90],
-                    [countries.wiggen, +100]
+                    [countries.wiggen, +50]
                 ]
             ),
 
             new InfluenceShiftBulk(_scientificBondKey,
                 [
-                    [countries.stooser, +100],
-                    [countries.quinny, +30],
-                    [countries.spectre, +30],
-                    [countries.wiggen, +30]
+                    [countries.stooser, +200],
+                    [countries.quinny, +100],
+                    [countries.spectre, +100],
+                    [countries.wiggen, +100]
                 ]
             )
+        ],
+        [],
+        [
+            new PermanentFactionShift(_scientificBondKey, 0.5, true)
         ]
     ),
 
-    period2320: new Period(
-        "2320",
+    period2320s: new Period(
+        "2320s",
 
         `Work in progress: roleplay still has to be done
         `,
         [
             new InfluenceShiftBulk(_spaceWeaverKey,
                 [
-                    [countries.randwarf, +30],
-                    [countries.wiggen, +50]
+                    [countries.randwarf, +87 + 20], // Trade, CGs
+                    [countries.quinny, +128],
+                    [countries.sari, +40],
+                    [countries.kindra, +14],
+                    // +50 for now being an established member
+                    [countries.wiggen, +145, +50]
                 ]
             ),
 
             new InfluenceShiftBulk(_scientificBondKey,
                 [
-                    [countries.stooser, +50],
-                    [countries.quinny, +50],
-                    [countries.spectre, +50],
-                    [countries.wiggen, +50]
+                    [countries.stooser, +0],
+                    [countries.quinny, +0],
+                    [countries.spectre, +0],
+                    [countries.wiggen, +0]
                 ]
             )
         ]
@@ -418,7 +501,7 @@ let periods = {
 
 let influenceHistory = [
     periods.period2310s,
-    periods.period2320
+    periods.period2320s
 ]
 
 main()
