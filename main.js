@@ -81,6 +81,13 @@ class InfluenceShiftBulk {
     }
 }
 
+class FactionShift {
+    constructor(factionKey, multiplier) {
+        this.faction = factions[factionKey]
+        this.multiplier = multiplier
+    }
+}
+
 class Period {
     constructor(name, description, influenceShifts) {
         this.name = name
