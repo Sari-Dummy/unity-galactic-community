@@ -83,21 +83,28 @@ class InfluenceShiftBulk {
 
 class FactionShift {
     constructor(factionKey, multiplier) {
-        this.faction = factions[factionKey]
+        this.factionKey = factionKey
         this.multiplier = multiplier
     }
 }
 
 class Period {
-    constructor(name, description, influenceShifts) {
+    constructor(name, description, influenceShifts = [], factionShifts = []) {
         this.name = name
         this.description = description
         this.influenceShifts = influenceShifts
+        this.factionShifts = factionShifts
     }
 }
 
 function shiftInfluence(influenceShift) {
     influenceShift.country.factions[influenceShift.factionKey].points += influenceShift.amountOfPoints
+}
+
+function shiftFactionInfluence(factionShift) {
+    for (let country of factions[factionShift.factionKey].memberCountries) {
+        country.factions[factionShift.factionKey].points *= factionShift.multiplier
+    }
 }
 
 function calculateCountryPoints() {
@@ -106,6 +113,9 @@ function calculateCountryPoints() {
             for (let influenceShift of influenceShiftBulk.influenceShiftArray) {
                 shiftInfluence(influenceShift)
             }
+        }
+        for (let factionShift of period.factionShifts) {
+            shiftFactionInfluence(factionShift)
         }
     }
 }
@@ -253,12 +263,51 @@ function influenceShiftBulkToHtml(influenceShiftBulk) {
     `
 }
 
+function factionShiftToHtml(factionShift) {
+    let shiftPercentage = 0
+    if (factionShift.multiplier < 1) {
+        shiftPercentage = Math.round(-((1 - factionShift.multiplier) * 100))
+    } else {
+        shiftPercentage = Math.round((factionShift.multiplier - 1) * 100)
+    }
+
+    return `
+    <tr>
+        <td>${factions[factionShift.factionKey].name}</td>
+        <td>${shiftPercentage}%</td>
+    </tr>
+    `
+}
+
+function allFactionShiftsToHtml(factionShifts) {
+    if (factionShifts.length == 0) {
+        return ""
+    }
+
+    let factionShiftRows = ""
+    for (let factionShift of factionShifts) {
+        factionShiftRows += factionShiftToHtml(factionShift)
+    }
+
+    return `
+    <table class="influence-shift">
+        <thead>
+            <th colspan="2">Faction wide shifts</th>
+        </thead>
+        <tbody>
+            ${factionShiftRows}
+        </tbody>
+    </table>
+    `
+}
+
 function periodToHtml(period) {
     let influenceShiftTables = ""
 
     for (influenceShiftBulk of period.influenceShifts) {
         influenceShiftTables += influenceShiftBulkToHtml(influenceShiftBulk)
     }
+
 
     let periodHtml = `
     <details class="influence-period">
@@ -269,6 +318,7 @@ function periodToHtml(period) {
             ${period.description}
         </p>
         ${influenceShiftTables}
+        ${allFactionShiftsToHtml(period.factionShifts)}
     </details>
     <br>
     `
